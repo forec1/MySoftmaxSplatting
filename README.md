@@ -3,3 +3,9 @@
 # MySoftmaxSplatting
 
 My implementation of softmax splatting for PyTorch written in CUDA
+
+
+
+## Acknowledgments
+
+* [Simon Niklaus and Feng Liu, Softmax Splatting for Video Frame Interpolation, 2020](https://arxiv.org/abs/2003.05534)

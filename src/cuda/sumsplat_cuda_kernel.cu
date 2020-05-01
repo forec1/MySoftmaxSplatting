@@ -253,7 +253,7 @@ torch::Tensor sumsplat_update_gradinput_cuda(
 	const int blockSize = 256;
 	const int numBlocks = 1024;
 
-	sumsplat_update_gradinput_cuda_kernel<<<blockSize, numBlocks>>>(
+	sumsplat_update_gradinput_cuda_kernel<float><<<blockSize, numBlocks>>>(
 		N,
 		flow.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
 		grad_output.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
@@ -276,7 +276,7 @@ torch::Tensor sumsplat_update_gradflow_cuda(
 	const int blockSize = 256;
 	const int numBlocks = 1024;
 
-	sumsplat_update_gradflow_cuda_kernel<<<blockSize, numBlocks>>>(
+	sumsplat_update_gradflow_cuda_kernel<float><<<blockSize, numBlocks>>>(
 		N,
 		input.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
 		flow.packed_accessor32<float,4,torch::RestrictPtrTraits>(),

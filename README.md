@@ -1,4 +1,4 @@
-<p align="center"><img src="https://user-images.githubusercontent.com/44374235/80810348-eaa84000-8bc3-11ea-8ddf-3bec35cd3a33.png"><img src="https://user-images.githubusercontent.com/44374235/80810372-f85dc580-8bc3-11ea-9de2-9fc47e67c249.jpg" style="float: centre;" width=180 height=130></p>
+<p align="center"><img src="https://user-images.githubusercontent.com/44374235/80810348-eaa84000-8bc3-11ea-8ddf-3bec35cd3a33.png"><img src="https://user-images.githubusercontent.com/44374235/80810372-f85dc580-8bc3-11ea-9de2-9fc47e67c249.jpg" style="float: centre;" width=160 height=130></p>
 
 # MySoftmaxSplatting
 

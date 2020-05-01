@@ -270,7 +270,7 @@ torch::Tensor sumsplat_update_gradflow_cuda(
 		torch::Tensor flow,
 		torch::Tensor grad_output
 ){
-	torch::Tensor grad_flow = torch::zeros_like(input);
+	torch::Tensor grad_flow = torch::zeros_like(flow);
 	const int N = grad_flow.numel();
 
 	const int blockSize = 256;

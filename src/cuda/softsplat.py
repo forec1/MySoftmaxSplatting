@@ -3,14 +3,11 @@ import torch
 import sumsplat_cuda as ss
 
 
-class SoftSplatFunction(torch.autograd.Function):
+class SumSplatFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, tenInput, tenFlow, importance_mask):
+    def forward(ctx, tenInput, tenFlow):
         ctx.save_for_backward(tenInput, tenFlow)
-        tenInput = torch.cat([tenInput * importance_mask.exp(), importance_mask.exp()], 1)
-        tenOutput = ss.forward(tenInput, tenFlow)
-        tenOutput = tenOutput[:, :-1, :, :] / (tenOutput[:, -1:, :, :] + 0.0000001)
-        return tenOutput
+        return ss.forward(tenInput, tenFlow)
 
     @staticmethod
     def backward(ctx, gradOutput):
@@ -20,30 +17,34 @@ class SoftSplatFunction(torch.autograd.Function):
         return gradInput, gradFlow
 
 
-class SumSplatFunction(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, tenInput, tenFlow):
-        return ss.forward(tenInput, tenFlow)
+def splatting(x, flow, metric, str_type):
+    assert(str_type in ['summation', 'average', 'linear', 'softmax'])
+    assert(metric is None or metric.shape[1] == 1)
+
+    if str_type == 'average':
+        x = torch.cat([x, x.new_ones(x.shape[0], 1, x.shape[2], x.shape[3])], 1)
+
+    elif str_type == 'linear':
+        x = torch.cat([x * metric, metric], 1)
+
+    elif str_type == 'softmax':
+        x = torch.cat([x * metric.exp(), metric.exp()], 1)
+
+    output = SumSplatFunction.apply(x, flow)
+
+    if str_type != 'summation':
+        output = output[:, :-1, :, :] / (output[:, -1:, :, :] + 0.0000001)
+
+    return output
 
 
-class AvgSplatFunction(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, tenInput, tenFlow):
-        tenInput = torch.cat([tenInput, tenInput.new_ones(tenInput.shape[0], 1, tenInput.shape[2], tenInput.shape[3])], 1)
-        tenOutput = ss.forward(tenInput, tenFlow)
-        tenOutput = tenOutput[:, :-1, :, :] / (tenOutput[:, -1:, :, :] + 0.0000001)
-        return tenOutput
-
-
-class LinearSplatFunction(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, tenInput, tenFlow, importance_mask):
-        tenInput = torch.cat([tenInput * importance_mask, importance_mask], 1)
-        tenOutput = ss.forward(tenInput, tenFlow)
-        tenOutput = tenOutput[:, :-1, :, :] / (tenOutput[:, -1:, :, :] + 0.0000001)
-        return tenOutput
+def softsplat(x, flow, metric):
+    x = torch.cat([x * metric.exp(), metric.exp()], 1)
+    output = SumSplatFunction.apply(x, flow)
+    output = output[:, :-1, :, :] / (output[:, -1:, :, :] + 0.0000001)
+    return output
 
 
 class SoftSplat(torch.nn.Module):
-    def forward(self, tenInput, tenFlow, importance_mask):
-        return SoftSplatFunction.apply(tenInput, tenFlow, importance_mask)
+    def forward(self, x, flow, metric):
+        return softsplat(x, flow, metric)

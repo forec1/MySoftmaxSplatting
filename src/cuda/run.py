@@ -44,10 +44,10 @@ tenFlow = torch.FloatTensor(flow.transpose(2, 0, 1)[None, :, :, :]).cuda()
 tenMetric = torch.nn.functional.l1_loss(input=tenFirst, target=backwarp(tenInput=tenSecond, tenFlow=tenFlow), reduction='none').mean(1, True)
 
 for intTime, fltTime in enumerate(np.linspace(0.0, 1.0, 11).tolist()):
-    tenSoftmax = softsplat.SoftSplatFunction.apply(tenFirst, tenFlow * fltTime, -20.0 * tenMetric)
-    tenSummation = softsplat.SumSplatFunction.apply(tenFirst, tenFlow * fltTime)
-    tenAverage = softsplat.AvgSplatFunction.apply(tenFirst, tenFlow * fltTime)
-    tenLinear = softsplat.LinearSplatFunction.apply(tenFirst, tenFlow * fltTime, (0.3 - tenMetric).clamp(0.0000001, 1))
+    tenSoftmax = softsplat.splatting(tenFirst, tenFlow * fltTime, -20.0 * tenMetric, 'softmax')
+    tenSummation = softsplat.splatting(tenFirst, tenFlow * fltTime, None, 'summation')
+    tenAverage = softsplat.splatting(tenFirst, tenFlow * fltTime, None, 'average')
+    tenLinear = softsplat.splatting(tenFirst, tenFlow * fltTime, (0.3 - tenMetric).clamp(0.0000001, 1), 'linear')
 
     fig, axs = plt.subplots(2, 2)
     axs[0, 0].imshow(tenSoftmax[0,:, :, :].cpu().numpy().transpose(1, 2, 0))

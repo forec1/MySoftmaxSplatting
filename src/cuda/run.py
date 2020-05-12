@@ -37,9 +37,9 @@ imgFirst = plt.imread('../../resources/first.png')
 imgSecond = plt.imread('../../resources/second.png')
 flow = read_flo('../../resources/flow.flo')
 
-tenFirst = torch.FloatTensor(imgFirst.transpose(2, 0, 1)[None, :, :, :]).cuda()
-tenSecond = torch.FloatTensor(imgSecond.transpose(2, 0, 1)[None, :, :, :]).cuda()
-tenFlow = torch.FloatTensor(flow.transpose(2, 0, 1)[None, :, :, :]).cuda()
+tenFirst = torch.tensor(imgFirst.transpose(2, 0, 1)[None, :, :, :], dtype=torch.float32).cuda()
+tenSecond = torch.tensor(imgSecond.transpose(2, 0, 1)[None, :, :, :], dtype=torch.float32).cuda()
+tenFlow = torch.tensor(flow.transpose(2, 0, 1)[None, :, :, :], dtype=torch.float32).cuda()
 
 tenMetric = torch.nn.functional.l1_loss(input=tenFirst, target=backwarp(tenInput=tenSecond, tenFlow=tenFlow), reduction='none').mean(1, True)
 

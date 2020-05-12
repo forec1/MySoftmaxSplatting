@@ -22,8 +22,8 @@ __global__ void sumsplat_update_output_cuda_kernel(
 		/* Float vrijednosti indeksa piksela:
 		 * q + F_0->t[q]
 		 * */
-		float flt_output_x = (float) qx + flow[N][0][qy][qx];
-		float flt_output_y = (float) qy + flow[N][1][qy][qx];
+		scalar_t flt_output_x = (scalar_t) qx + flow[N][0][qy][qx];
+		scalar_t flt_output_y = (scalar_t) qy + flow[N][1][qy][qx];
 
 		// Indeksi susjednih piksela
 		int p_up_left_x = (int) floor(flt_output_x);
@@ -46,10 +46,10 @@ __global__ void sumsplat_update_output_cuda_kernel(
 		 * ako je float vrijednost indeksa piksela bliža trenutnom pikselu on treba doprinosit više,
 		 * zato se radi |nasuprotni_piksel - float_indeks_piksela|
 		 * */
-		float b_up_left = ((float) (p_down_right_x) - flt_output_x) * ((float) (p_down_right_y) - flt_output_y);
-		float b_up_right = (flt_output_x - (float) (p_down_left_x)) * ((float) (p_down_left_y) - flt_output_y);
-		float b_down_left = ((float) (p_up_right_x) - flt_output_x) * (flt_output_y - (float) (p_up_right_y));
-		float b_down_right = (flt_output_x - (float) (p_up_left_x)) * (flt_output_y - (float) (p_up_left_y));
+		scalar_t b_up_left = ((scalar_t) (p_down_right_x) - flt_output_x) * ((scalar_t) (p_down_right_y) - flt_output_y);
+		scalar_t b_up_right = (flt_output_x - (scalar_t) (p_down_left_x)) * ((scalar_t) (p_down_left_y) - flt_output_y);
+		scalar_t b_down_left = ((scalar_t) (p_up_right_x) - flt_output_x) * (flt_output_y - (scalar_t) (p_up_right_y));
+		scalar_t b_down_right = (flt_output_x - (scalar_t) (p_up_left_x)) * (flt_output_y - (scalar_t) (p_up_left_y));
 
 		if((p_up_left_x >= 0) & (p_up_left_x < output.size(3)) & (p_up_left_y >= 0) & (p_up_left_y < output.size(2))) {
 			atomicAdd(&output[N][C][p_up_left_y][p_up_left_x],( input[N][C][qy][qx] * b_up_left));
@@ -83,8 +83,8 @@ __global__ void sumsplat_update_gradinput_cuda_kernel(
 		const int qy = (i / grad_input.size(3)) % grad_input.size(2);
 		const int qx =  i % grad_input.size(3);
 
-		float flt_output_x = (float) qx + flow[N][0][qy][qx];
-		float flt_output_y = (float) qy + flow[N][1][qy][qx];
+		scalar_t flt_output_x = (scalar_t) qx + flow[N][0][qy][qx];
+		scalar_t flt_output_y = (scalar_t) qy + flow[N][1][qy][qx];
 
 		int p_up_left_x = (int) floor(flt_output_x);
 		int p_up_left_y = (int) floor(flt_output_y);
@@ -98,12 +98,12 @@ __global__ void sumsplat_update_gradinput_cuda_kernel(
 		int p_down_right_x = p_up_left_x + 1;
 		int p_down_right_y = p_up_left_y + 1;
 
-		float b_up_left = ((float) (p_down_right_x) - flt_output_x) * ((float) (p_down_right_y) - flt_output_y);
-		float b_up_right = (flt_output_x - (float) (p_down_left_x)) * ((float) (p_down_left_y) - flt_output_y);
-		float b_down_left = ((float) (p_up_right_x) - flt_output_x) * (flt_output_y - (float) (p_up_right_y));
-		float b_down_right = (flt_output_x - (float) (p_up_left_x)) * (flt_output_y - (float) (p_up_left_y));
+		scalar_t b_up_left = ((scalar_t) (p_down_right_x) - flt_output_x) * ((scalar_t) (p_down_right_y) - flt_output_y);
+		scalar_t b_up_right = (flt_output_x - (scalar_t) (p_down_left_x)) * ((scalar_t) (p_down_left_y) - flt_output_y);
+		scalar_t b_down_left = ((scalar_t) (p_up_right_x) - flt_output_x) * (flt_output_y - (scalar_t) (p_up_right_y));
+		scalar_t b_down_right = (flt_output_x - (scalar_t) (p_up_left_x)) * (flt_output_y - (scalar_t) (p_up_left_y));
 
-		float grad = 0.0;
+		scalar_t grad = 0.0;
 
 		if((p_up_left_x >= 0) & (p_up_left_x < grad_input.size(3)) & (p_up_left_y >= 0) & (p_up_left_y < grad_input.size(2))) {
 			grad += grad_output[N][C][p_up_left_y][p_up_left_x] * b_up_left;
@@ -133,75 +133,63 @@ __global__ void sumsplat_update_gradflow_cuda_kernel(
 ) {
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
 	int stride = blockDim.x * gridDim.x;
-	for(int i = index; i < n; i += stride) {
-		const int N = (i / grad_flow.size(3) / grad_flow.size(2) / grad_flow.size(1)) % grad_flow.size(0);
-		const int C = (i / grad_flow.size(3) / grad_flow.size(2)) % grad_flow.size(1);
-		const int qy = (i / grad_flow.size(3)) % grad_flow.size(2);
-		const int qx =  i % grad_flow.size(3);
+	for (int i = index; i < n; i += stride) {
+			scalar_t flt_grad_flow = 0.0;
+			const int N = (i / grad_flow.size(3) / grad_flow.size(2) / grad_flow.size(1)) % grad_flow.size(0);
+			const int C = (i / grad_flow.size(3) / grad_flow.size(2)) % grad_flow.size(1);
+			const int qy = (i / grad_flow.size(3)) % grad_flow.size(2);
+			const int qx = i % grad_flow.size(3);
 
-		float flt_output_x = (float) qx + flow[N][0][qy][qx];
-		float flt_output_y = (float) qy + flow[N][1][qy][qx];
+			scalar_t flt_output_x = (scalar_t) (qx) + flow[N][0][qy][qx];
+			scalar_t flt_output_y = (scalar_t) (qy) + flow[N][1][qy][qx];
 
-		int p_up_left_x = (int) floor(flt_output_x);
-		int p_up_left_y = (int) floor(flt_output_y);
+			int p_up_left_x = (int) (floor(flt_output_x));
+			int p_up_left_y = (int) (floor(flt_output_y));
 
-		int p_up_right_x = p_up_left_x + 1;
-		int p_up_right_y = p_up_left_y;
+			int p_up_right_x = p_up_left_x + 1;
+			int p_up_right_y = p_up_left_y;
 
-		int p_down_left_x = p_up_left_x;
-		int p_down_left_y = p_up_left_y + 1;
+			int p_down_left_x = p_up_left_x;
+			int p_down_left_y = p_up_left_y + 1;
 
-		int p_down_right_x = p_up_left_x + 1;
-		int p_down_right_y = p_up_left_y + 1;
+			int p_down_right_x = p_up_left_x + 1;
+			int p_down_right_y = p_up_left_y + 1;
 
-		float db_dF_up_left = 0.0;
-		float db_dF_up_right = 0.0;
-		float db_dF_down_left = 0.0;
-		float db_dF_down_right = 0.0;
+			scalar_t db_dF_up_left = 0.0;
+			scalar_t db_dF_up_right = 0.0;
+			scalar_t db_dF_down_left = 0.0;
+			scalar_t db_dF_down_right = 0.0;
 
-		//TODO: MENI SE CINI DA JE GRESKA U PREDZNACIMA KAD USPOREDJIVAM S JEDNADBOM
-		//grads with respect to x component of flow
-		if(C == 0) {
-			//px < (qx + F0->t[qx] => ux < 0 -> -1.0
-			db_dF_up_left = ((float) (-1.0)) * ((float) (p_down_right_y) - flt_output_y);
+			if (C == 0) {
+				db_dF_up_left = ((scalar_t) (-1.0)) * ((scalar_t) (p_down_right_y) - flt_output_y);
+				db_dF_up_right = ((scalar_t) (+1.0)) * ((scalar_t) (p_down_left_y) - flt_output_y);
+				db_dF_down_left = ((scalar_t) (-1.0)) * (flt_output_y - (scalar_t) (p_up_right_y));
+				db_dF_down_right = ((scalar_t) (+1.0)) * (flt_output_y - (scalar_t) (p_up_left_y));
+			} else if (C == 1) {
+				db_dF_up_left = ((scalar_t) (p_down_right_x) - flt_output_x) * ((scalar_t) (-1.0));
+				db_dF_up_right = (flt_output_x - (scalar_t) (p_down_left_x)) * ((scalar_t) (-1.0));
+				db_dF_down_left = ((scalar_t) (p_up_right_x) - flt_output_x) * ((scalar_t) (+1.0));
+				db_dF_down_right = (flt_output_x - (scalar_t) (p_up_left_x)) * ((scalar_t) (+1.0));
+			}
 
-			//px > (qx + F0->t[qx] => ux > 0 -> +1.0
-			db_dF_up_right = ((float) (+1.0)) * ((float) (p_down_left_y) - flt_output_y);
-
-			db_dF_down_left = ((float) (-1.0)) * (flt_output_y - (float) (p_up_right_y));
-			db_dF_down_right = ((float) (+1.0)) * (flt_output_y - (float) (p_up_left_y));
-
-			// grads with respect to y component of flow
-		} else if (C == 1) {
-			//py < (qx + F0->t[qy] => ux < 0 -> -1.0
-			db_dF_up_left = ((float) (-1.0)) * ((float) (p_down_right_x) - flt_output_x);
-			db_dF_up_right = ((float) (-1.0)) * (flt_output_x - (float) (p_down_left_x));
-
-			//py > (qx + F0->t[qy] => ux < 0 -> -1.0
-			db_dF_down_left = ((float) (+1.0)) * ((float) (p_up_right_x) - flt_output_x);
-			db_dF_down_right = ((float) (+1.0)) * (flt_output_x - (float) (p_up_left_x));
+			int C_max = grad_output.size(1);
+			for (int Ci = 0; Ci < C_max; Ci += 1) {
+				scalar_t flt_input = input[N][Ci][qy][qx];
+				if ((p_up_left_x >= 0) & (p_up_left_x < grad_output.size(3)) & (p_up_left_y >= 0) & (p_up_left_y < grad_output.size(2))) {
+					flt_grad_flow += flt_input * grad_output[N][Ci][p_up_left_y][p_up_left_x] * db_dF_up_left;
+				}
+				if ((p_up_right_x >= 0) & (p_up_right_x < grad_output.size(3)) & (p_up_right_y >= 0) & (p_up_right_y < grad_output.size(2))) {
+					flt_grad_flow += flt_input * grad_output[N][Ci][p_up_right_y][p_up_right_x] * db_dF_up_right;
+				}
+				if ((p_down_left_x >= 0) & (p_down_left_x < grad_output.size(3)) & (p_down_left_y >= 0) & (p_down_left_y < grad_output.size(2))) {
+					flt_grad_flow += flt_input * grad_output[N][Ci][p_down_left_y][p_down_left_x] * db_dF_down_left;
+				}
+				if ((p_down_right_x >= 0) & (p_down_right_x < grad_output.size(3)) & (p_down_right_y >= 0) & (p_down_right_y < grad_output.size(2))) {
+					flt_grad_flow += flt_input * grad_output[N][Ci][p_down_right_y][p_down_right_x] * db_dF_down_right;
+				}
+			}
+			grad_flow[N][C][qy][qx] = flt_grad_flow;
 		}
-		float grad = 0.0;
-		int C_size = grad_output.size(1);
-
-		for(int Ci = 0; Ci < C_size; Ci += 1) {
-			float flt_input = input[N][Ci][qy][qx];
-
-			if((p_up_left_x >= 0) & (p_up_left_x < grad_output.size(3)) & (p_up_left_y >= 0) & (p_up_left_y < grad_output.size(2))) {
-				grad += flt_input * grad_output[N][Ci][p_up_left_y][p_up_left_x] * db_dF_up_left;
-			}
-			if((p_up_right_x >= 0) & (p_up_right_x < grad_output.size(3)) & (p_up_right_y >= 0) & (p_up_right_y < grad_output.size(2))) {
-				grad += flt_input * grad_output[N][Ci][p_up_right_y][p_up_right_x] * db_dF_up_right;
-			}
-			if((p_down_left_x >= 0) & (p_down_left_x < grad_output.size(3)) & (p_down_left_y >= 0) & (p_down_left_y < grad_output.size(2))) {
-				grad += grad_output[N][Ci][p_down_left_y][p_down_left_x] * db_dF_down_left;
-			}
-			if((p_down_right_x >= 0) & (p_down_right_x < grad_output.size(3)) & (p_down_right_y >= 0) & (p_down_right_y < grad_output.size(2))) {
-				grad += flt_input * grad_output[N][Ci][p_down_right_y][p_down_right_x] * db_dF_down_right;
-			}
-			grad_flow[N][C][qy][qx] = grad;
-		}
-	}
 }
 
 
@@ -270,7 +258,7 @@ torch::Tensor sumsplat_update_gradflow_cuda(
 		torch::Tensor flow,
 		torch::Tensor grad_output
 ){
-	torch::Tensor grad_flow = torch::zeros_like(flow);
+	torch::Tensor grad_flow = input.new_zeros(flow.sizes());
 	const int N = grad_flow.numel();
 
 	const int blockSize = 256;

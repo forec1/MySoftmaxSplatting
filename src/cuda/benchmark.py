@@ -35,6 +35,8 @@ output = sumsplat(X, F)
 
 forward_min = math.inf
 forward_time = 0
+backward_min = math.inf
+backward_time = 0
 for _ in range(options.runs):
     start = time.time()
     output = sumsplat(X, F)
@@ -42,13 +44,23 @@ for _ in range(options.runs):
     forward_min = min(forward_min, elapsed)
     forward_time += elapsed
 
+    start = time.time()
+    (output.sum()).backward()
+    elapsed = time.time() - start
+    backward_min = min(backward_min, elapsed)
+    backward_time += elapsed
+
 scale = TIME_SCALES[options.scale]
 forward_min *= scale
 forward_average = forward_time / options.runs * scale
 
-print('Forward: {0:.3f}/{1:.3f} {2}'.format(
-    forward_min, forward_average,
+backward_min *= scale
+backward_average = backward_time / options.runs * scale
+
+print('Forward: {0:.6f}/{1:.6f} {4} | Backward {2:.6f}/{3:.6f} {4}'.format(
+    forward_min, forward_average, backward_min, backward_average,
     options.scale))
 if options.save:
     with open(options.save, "w") as f:
-        f.write(str(forward_min) + " & " + str(forward_average))
+        f.write(str(forward_min) + ", " + str(forward_average) + "\n")
+        f.write(str(backward_min) + ", " + str(backward_average))
